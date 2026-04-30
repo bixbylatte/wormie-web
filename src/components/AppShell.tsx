@@ -1,6 +1,7 @@
-import { BookMarked, House, LogOut, MessagesSquare, PlusSquare } from "lucide-react";
+import { House, LogOut, MessagesSquare, PlusSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import { BrandLockup } from "./BrandLockup";
 import { useAuth } from "../hooks/useAuth";
 
 const links = [
@@ -15,15 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand-mark">
-          <div className="brand-icon">
-            <BookMarked size={18} />
-          </div>
-          <div>
-            <p className="eyebrow">Trade or lend with your fellow Ingeneers and Visioneers</p>
-            <h1>Wormie</h1>
-          </div>
-        </div>
+        <BrandLockup compact subtitle="Trade or lend with your fellow Ingeneers and Visioneers" />
         <div className="user-chip">
           <span>{user?.display_name}</span>
           <small>{user?.email}</small>
@@ -53,4 +46,3 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

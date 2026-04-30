@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BookHeart, LibraryBig, LockKeyhole, Repeat2 } from "lucide-react";
 
+import { BrandLockup } from "../components/BrandLockup";
 import { useAuth } from "../hooks/useAuth";
 
 export function LandingPage() {
@@ -39,13 +40,18 @@ export function LandingPage() {
   return (
     <div className="landing-layout">
       <section className="hero-panel">
+        <BrandLockup subtitle="Shared shelves for book-loving teams" titleAs="p" />
         <p className="hero-kicker">Internal book-sharing, without the friction</p>
         <h1>Wormie lets your team lend or trade physical books with each other.</h1>
         <p className="hero-copy">
-          Post your shelf, make barter offers, and track borrowed books before they disappear into someone else’s
-          desk pile.
+          Post your shelf, make barter offers, and track borrowed books before they disappear into someone else's desk
+          pile.
         </p>
 
+        <div className="hero-note">
+          <span className="hero-note-label">Built for teams</span>
+          <p>Keep office lending visible, lightweight, and organized around a single shared shelf.</p>
+        </div>
         <div className="feature-strip">
           <article>
             <LibraryBig size={20} />
@@ -121,7 +127,7 @@ export function LandingPage() {
           {error ? <p className="error-text">{error}</p> : null}
 
           <button type="submit" className="primary-button" disabled={submitting}>
-            {submitting ? "Please wait…" : mode === "login" ? "Log In" : "Create account"}
+            {submitting ? "Please wait..." : mode === "login" ? "Log In" : "Create account"}
           </button>
         </form>
       </section>
