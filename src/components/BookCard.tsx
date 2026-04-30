@@ -1,4 +1,5 @@
-import { BookOpenText, Clock3, Link2, Repeat2, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpenText, Clock3, ImageOff, Link2, Repeat2, UserRound } from "lucide-react";
 
 import type { BookSummary } from "../api/types";
 
@@ -13,6 +14,11 @@ interface BookCardProps {
 export function BookCard({ book, isOwner, onRequest, onToggleAvailability, isBusy }: BookCardProps) {
   const available = book.status === "AVAILABLE";
   const requestDisabled = !available || isOwner || isBusy;
+  const [coverFailed, setCoverFailed] = useState(!book.cover_url);
+
+  useEffect(() => {
+    setCoverFailed(!book.cover_url);
+  }, [book.cover_url]);
 
   return (
     <article className="book-card">
@@ -26,7 +32,14 @@ export function BookCard({ book, isOwner, onRequest, onToggleAvailability, isBus
       </div>
 
       <div className="cover-frame">
-        <img src={book.cover_url} alt={`${book.title} cover`} className="cover-image" />
+        {coverFailed ? (
+          <div className="cover-placeholder" role="img" aria-label={`${book.title} cover unavailable`}>
+            <ImageOff size={28} />
+            <span>Cover unavailable</span>
+          </div>
+        ) : (
+          <img src={book.cover_url} alt={`${book.title} cover`} className="cover-image" onError={() => setCoverFailed(true)} />
+        )}
       </div>
 
       <div className="book-meta">
@@ -77,4 +90,3 @@ export function BookCard({ book, isOwner, onRequest, onToggleAvailability, isBus
     </article>
   );
 }
-

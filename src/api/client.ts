@@ -8,18 +8,36 @@ import type {
   ShareMode,
   UserSummary
 } from "./types";
+import { API_BASE_URL, resolveApiAssetUrl } from "./media";
 
-function normalizeApiBaseUrl(value: string | undefined): string {
-  if (!value) {
-    return "";
-  }
-
-  return value.trim().replace(/\/$/, "");
+function normalizeBookSummary(book: BookSummary): BookSummary {
+  return {
+    ...book,
+    cover_url: resolveApiAssetUrl(book.cover_url)
+  };
 }
 
-const API_BASE =
-  normalizeApiBaseUrl(window.__WORMIE_CONFIG__?.API_BASE_URL) ||
-  normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
+function normalizeBookListResponse(response: BookListResponse): BookListResponse {
+  return {
+    ...response,
+    items: response.items.map(normalizeBookSummary)
+  };
+}
+
+function normalizeShareRequestSummary(response: ShareRequestSummary): ShareRequestSummary {
+  return {
+    ...response,
+    book: normalizeBookSummary(response.book),
+    offered_books: response.offered_books.map(normalizeBookSummary)
+  };
+}
+
+function normalizeGroupedRequestsResponse(response: GroupedRequestsResponse): GroupedRequestsResponse {
+  return {
+    your_requests: response.your_requests.map(normalizeShareRequestSummary),
+    requests_from_others: response.requests_from_others.map(normalizeShareRequestSummary)
+  };
+}
 
 export class ApiError extends Error {
   status: number;
@@ -80,7 +98,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers
   });
@@ -118,10 +136,10 @@ export const booksApi = {
     if (options?.mineOnly) params.set("mine_only", "true");
     if (options?.shareMode) params.set("share_mode", options.shareMode);
     const query = params.toString();
-    return request<BookListResponse>(`/api/v1/books${query ? `?${query}` : ""}`, {}, token);
+    return request<BookListResponse>(`/api/v1/books${query ? `?${query}` : ""}`, {}, token).then(normalizeBookListResponse);
   },
   create(token: string, payload: FormData) {
-    return request<BookSummary>("/api/v1/books", { method: "POST", body: payload }, token);
+    return request<BookSummary>("/api/v1/books", { method: "POST", body: payload }, token).then(normalizeBookSummary);
   },
   updateAvailability(token: string, bookId: number, status: ListingStatus) {
     return request<BookSummary>(
@@ -131,7 +149,7 @@ export const booksApi = {
         body: JSON.stringify({ status })
       },
       token
-    );
+    ).then(normalizeBookSummary);
   }
 };
 
@@ -144,10 +162,10 @@ export const requestsApi = {
         body: JSON.stringify(input)
       },
       token
-    );
+    ).then(normalizeShareRequestSummary);
   },
   list(token: string) {
-    return request<GroupedRequestsResponse>("/api/v1/requests", {}, token);
+    return request<GroupedRequestsResponse>("/api/v1/requests", {}, token).then(normalizeGroupedRequestsResponse);
   },
   approve(token: string, requestId: number, selectedOfferedBookId?: number) {
     return request<ShareRequestSummary>(
@@ -157,15 +175,15 @@ export const requestsApi = {
         body: JSON.stringify({ selected_offered_book_id: selectedOfferedBookId ?? null })
       },
       token
-    );
+    ).then(normalizeShareRequestSummary);
   },
   reject(token: string, requestId: number) {
-    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/reject`, { method: "POST" }, token);
+    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/reject`, { method: "POST" }, token).then(normalizeShareRequestSummary);
   },
   returnLend(token: string, requestId: number) {
-    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/return`, { method: "POST" }, token);
+    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/return`, { method: "POST" }, token).then(normalizeShareRequestSummary);
   },
   completeTrade(token: string, requestId: number) {
-    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/complete`, { method: "POST" }, token);
+    return request<ShareRequestSummary>(`/api/v1/requests/${requestId}/complete`, { method: "POST" }, token).then(normalizeShareRequestSummary);
   }
 };
