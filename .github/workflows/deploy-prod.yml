@@ -114,6 +114,19 @@ jobs:
           echo "SERVICE_URL=${SERVICE_URL}" >> "$GITHUB_ENV"
           echo "service_url=${SERVICE_URL}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify runtime API config
+        shell: bash
+        run: |
+          set -euo pipefail
+          config_js="$(curl --fail --silent --show-error "${SERVICE_URL}/config.js")"
+          expected="API_BASE_URL: \"${API_BASE_URL}\""
+
+          if [[ "${config_js}" != *"${expected}"* ]]; then
+            echo "Expected ${SERVICE_URL}/config.js to contain ${expected}." >&2
+            printf '%s\n' "${config_js}" >&2
+            exit 1
+          fi
+
       - name: Write deployment summary
         shell: bash
         run: |
@@ -123,5 +136,5 @@ jobs:
             echo "- Image: \`${IMAGE_URI}\`"
             echo "- Service URL: ${SERVICE_URL}"
             echo "- Runtime API base URL: ${API_BASE_URL}"
-            echo "- Health check: \`${SERVICE_URL}/health\` passed"
+            echo "- Smoke checks: \`${SERVICE_URL}/health\` passed; \`${SERVICE_URL}/config.js\` exposes the expected API base URL"
           } >> "$GITHUB_STEP_SUMMARY"

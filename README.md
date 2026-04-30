@@ -42,8 +42,10 @@ That script creates or updates:
 After the API has a stable public URL, configure repository variables:
 
 ```powershell
-.\scripts\configure-github-repo.ps1 -ApiBaseUrl "https://your-api-service-url"
+.\scripts\configure-github-repo.ps1
 ```
+
+By default that resolves the live `wormie-api` Cloud Run service and stores its regional `...asia-east1.run.app` URL as `API_BASE_URL`.
 
 ### Manual fallback deploy
 
@@ -54,7 +56,6 @@ Deploy this repo manually as its own Cloud Run service:
   -ProjectId wormie-ingenuity `
   -Account bob.bbvillarin@gmail.com `
   -RuntimeServiceAccount "wormie-web-runtime@wormie-ingenuity.iam.gserviceaccount.com" `
-  -ApiBaseUrl "https://your-api-service-url" `
   -AllowUnauthenticated
 ```
 
@@ -66,8 +67,23 @@ Once CI has run successfully at least once, protect the production branch:
 .\scripts\enable-branch-protection.ps1
 ```
 
+That script also configures the repository to use squash merges only.
+
+## PR To Production
+
+Production changes should flow through GitHub only:
+
+1. Branch from `main`.
+2. Open a PR and wait for the `ci` workflow to pass.
+3. Get one approval and resolve review comments.
+4. Squash merge to `main`.
+5. Let `deploy-prod` publish to Cloud Run automatically.
+
+If a change spans both repos, merge and deploy `wormie-api` first, then merge `wormie-web` after the API deployment smoke checks pass.
+
 ## Notes
 
 - PRs validate the Vite build and Docker build.
 - Pushes to `main` deploy production directly.
-- The API repo still owns CORS; after the first web deployment, rerun the API repo configuration with the final web URL in `API_ALLOWED_ORIGINS`.
+- The API repo still owns CORS. After the first web deployment, rerun the API repo configuration with `-WebServiceName "wormie-web"` so both public web URLs are present in `API_ALLOWED_ORIGINS`.
+- Use `workflow_dispatch` as break-glass only. Avoid direct `gcloud` production hotfixes; if one is unavoidable, merge the matching repo fix immediately after.

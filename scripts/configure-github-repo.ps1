@@ -11,13 +11,64 @@ param(
   [string]$WifProviderId = "github-actions",
   [string]$RuntimeServiceAccountName = "wormie-web-runtime",
   [string]$DeployerServiceAccountName = "wormie-web-deployer",
+  [string]$ApiServiceName = "wormie-api",
   [string]$ApiBaseUrl
 )
 
 $ErrorActionPreference = "Stop"
 
+function Get-CloudRunServiceUrls {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ServiceName
+  )
+
+  $serviceJson = & gcloud run services describe $ServiceName `
+    --project $ProjectId `
+    --account $Account `
+    --region $Region `
+    --format json
+
+  if ($LASTEXITCODE -ne 0 -or -not $serviceJson) {
+    throw "Could not resolve Cloud Run service URLs for '$ServiceName'."
+  }
+
+  $service = $serviceJson | ConvertFrom-Json
+  $urls = @()
+  $annotationUrls = $service.metadata.annotations.'run.googleapis.com/urls'
+
+  if ($annotationUrls) {
+    $urls += $annotationUrls | ConvertFrom-Json
+  }
+
+  if ($service.status.url) {
+    $urls += $service.status.url
+  }
+
+  return $urls | Where-Object { $_ } | Select-Object -Unique
+}
+
+function Get-PreferredCloudRunUrl {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ServiceName
+  )
+
+  $urls = Get-CloudRunServiceUrls -ServiceName $ServiceName
+  $regionalUrl = $urls | Where-Object { $_ -like "https://*.$Region.run.app" } | Select-Object -First 1
+  if ($regionalUrl) {
+    return $regionalUrl
+  }
+
+  return $urls | Select-Object -First 1
+}
+
 if (-not $ApiBaseUrl) {
-  throw "Provide -ApiBaseUrl with the production Wormie API URL before enabling main-branch deployments."
+  if (-not $ApiServiceName) {
+    throw "Provide -ApiBaseUrl with the production Wormie API URL before enabling main-branch deployments."
+  }
+
+  $ApiBaseUrl = Get-PreferredCloudRunUrl -ServiceName $ApiServiceName
 }
 
 if (-not $ProjectNumber) {
@@ -50,3 +101,4 @@ foreach ($item in $vars.GetEnumerator()) {
 
 Write-Host ""
 Write-Host "Configured GitHub Actions variables for $Owner/$Repo."
+Write-Host "API_BASE_URL: $ApiBaseUrl"
