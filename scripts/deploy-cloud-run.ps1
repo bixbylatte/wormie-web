@@ -11,7 +11,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
 function Get-CloudRunServiceUrls {
   param(
     [Parameter(Mandatory = $true)]
@@ -57,7 +56,6 @@ function Get-PreferredCloudRunUrl {
 
   return $urls | Select-Object -First 1
 }
-
 if (-not $RuntimeServiceAccount) {
   throw "Provide -RuntimeServiceAccount with the web Cloud Run runtime service account email."
 }

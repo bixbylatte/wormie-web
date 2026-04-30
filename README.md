@@ -83,6 +83,9 @@ If a change spans both repos, merge and deploy `wormie-api` first, then merge `w
 
 ## Notes
 
+- Production covers should load directly from public GCS URLs.
+- Legacy relative cover URLs such as `/media/...` are still resolved against the runtime `API_BASE_URL` during the transition period.
+- Listings whose underlying cover files are already missing now show a placeholder card state; users need to re-upload those covers if the original files are unrecoverable.
 - PRs validate the Vite build and Docker build.
 - Pushes to `main` deploy production directly.
 - The API repo still owns CORS. After the first web deployment, rerun the API repo configuration with `-WebServiceName "wormie-web"` so both public web URLs are present in `API_ALLOWED_ORIGINS`.
