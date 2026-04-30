@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [string]$ProjectId = "wormie-ingenuity",
   [string]$Account = "bob.bbvillarin@gmail.com",
@@ -10,6 +8,8 @@ param(
   [string]$ApiBaseUrl,
   [switch]$AllowUnauthenticated
 )
+
+$ErrorActionPreference = "Stop"
 
 if (-not $RuntimeServiceAccount) {
   throw "Provide -RuntimeServiceAccount with the web Cloud Run runtime service account email."
