@@ -33,11 +33,30 @@ $payload = @{
 $payload = $payload | ConvertTo-Json -Depth 6
 
 $tempFile = New-TemporaryFile
+$repoSettingsFile = New-TemporaryFile
 try {
-  Set-Content -Path $tempFile -Value $payload -Encoding utf8
+  [System.IO.File]::WriteAllText(
+    $tempFile,
+    $payload,
+    [System.Text.UTF8Encoding]::new($false)
+  )
+
+  $repoSettingsPayload = @{
+    allow_squash_merge = $true
+    allow_merge_commit = $false
+    allow_rebase_merge = $false
+  } | ConvertTo-Json -Depth 4
+
+  [System.IO.File]::WriteAllText(
+    $repoSettingsFile,
+    $repoSettingsPayload,
+    [System.Text.UTF8Encoding]::new($false)
+  )
+
   & 'C:\Program Files\GitHub CLI\gh.exe' api `
     --method PUT `
     -H "Accept: application/vnd.github+json" `
+    -H "X-GitHub-Api-Version: 2022-11-28" `
     "/repos/$Owner/$Repo/branches/$Branch/protection" `
     --input $tempFile | Out-Null
 
@@ -47,10 +66,22 @@ try {
       -H "Accept: application/vnd.github+json" `
       "/repos/$Owner/$Repo/branches/$Branch/protection/required_pull_request_reviews" | Out-Null
   }
+
+  & 'C:\Program Files\GitHub CLI\gh.exe' api `
+    --method PATCH `
+    -H "Accept: application/vnd.github+json" `
+    -H "X-GitHub-Api-Version: 2022-11-28" `
+    "/repos/$Owner/$Repo" `
+    --input $repoSettingsFile | Out-Null
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "gh api failed with exit code $LASTEXITCODE"
+  }
 }
 finally {
   Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $repoSettingsFile -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ""
-Write-Host "Branch protection is enabled for ${Owner}/${Repo}:$Branch."
+Write-Host "Branch protection and squash-only merge settings are enabled for ${Owner}/${Repo}:$Branch."

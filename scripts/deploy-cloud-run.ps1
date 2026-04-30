@@ -5,18 +5,67 @@ param(
   [string]$Region = "asia-east1",
   [string]$Repository = "wormie-web",
   [string]$RuntimeServiceAccount,
+  [string]$ApiServiceName = "wormie-api",
   [string]$ApiBaseUrl,
   [switch]$AllowUnauthenticated
 )
 
 $ErrorActionPreference = "Stop"
+function Get-CloudRunServiceUrls {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ServiceName
+  )
 
+  $serviceJson = & gcloud run services describe $ServiceName `
+    --project $ProjectId `
+    --account $Account `
+    --region $Region `
+    --format json
+
+  if ($LASTEXITCODE -ne 0 -or -not $serviceJson) {
+    throw "Could not resolve Cloud Run service URLs for '$ServiceName'."
+  }
+
+  $service = $serviceJson | ConvertFrom-Json
+  $urls = @()
+  $annotationUrls = $service.metadata.annotations.'run.googleapis.com/urls'
+
+  if ($annotationUrls) {
+    $urls += $annotationUrls | ConvertFrom-Json
+  }
+
+  if ($service.status.url) {
+    $urls += $service.status.url
+  }
+
+  return $urls | Where-Object { $_ } | Select-Object -Unique
+}
+
+function Get-PreferredCloudRunUrl {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ServiceName
+  )
+
+  $urls = Get-CloudRunServiceUrls -ServiceName $ServiceName
+  $regionalUrl = $urls | Where-Object { $_ -like "https://*.$Region.run.app" } | Select-Object -First 1
+  if ($regionalUrl) {
+    return $regionalUrl
+  }
+
+  return $urls | Select-Object -First 1
+}
 if (-not $RuntimeServiceAccount) {
   throw "Provide -RuntimeServiceAccount with the web Cloud Run runtime service account email."
 }
 
 if (-not $ApiBaseUrl) {
-  throw "Provide -ApiBaseUrl with the public backend URL before deploying."
+  if (-not $ApiServiceName) {
+    throw "Provide -ApiBaseUrl with the public backend URL before deploying, or pass -ApiServiceName to resolve it automatically."
+  }
+
+  $ApiBaseUrl = Get-PreferredCloudRunUrl -ServiceName $ApiServiceName
 }
 
 $projectNumber = & gcloud projects describe $ProjectId --account $Account --format="value(projectNumber)"
@@ -84,18 +133,16 @@ API_BASE_URL: "$ApiBaseUrl"
 
   & gcloud @deployArgs
 
-  $serviceUrl = & gcloud run services describe $ServiceName `
-    --region $Region `
-    --project $ProjectId `
-    --account $Account `
-    --format "value(status.url)"
+  $serviceUrl = Get-PreferredCloudRunUrl -ServiceName $ServiceName
+  $serviceUrls = Get-CloudRunServiceUrls -ServiceName $ServiceName
 
   Invoke-WebRequest -Uri "$serviceUrl/health" -UseBasicParsing | Out-Null
 
   Write-Host ""
   Write-Host "Deployed $ServiceName to Cloud Run."
   Write-Host "Image: $imageUri"
-  Write-Host "Service URL: $serviceUrl"
+  Write-Host "Service URLs: $($serviceUrls -join ', ')"
+  Write-Host "Runtime API base URL: $ApiBaseUrl"
 }
 finally {
   Remove-Item -LiteralPath $envFile -Force -ErrorAction SilentlyContinue
