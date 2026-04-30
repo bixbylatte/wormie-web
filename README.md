@@ -68,7 +68,8 @@ Once CI has run successfully at least once, protect the production branch:
 
 ## Notes
 
-- Legacy relative cover URLs such as `/media/...` are resolved against the runtime `API_BASE_URL` before rendering.
+- Production covers should load directly from public GCS URLs.
+- Legacy relative cover URLs such as `/media/...` are still resolved against the runtime `API_BASE_URL` during the transition period.
 - Listings whose underlying cover files are already missing now show a placeholder card state; users need to re-upload those covers if the original files are unrecoverable.
 - PRs validate the Vite build and Docker build.
 - Pushes to `main` deploy production directly.

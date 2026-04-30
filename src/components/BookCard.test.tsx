@@ -12,7 +12,7 @@ const book = {
   author: "Tyler Cowen",
   genre: "Management",
   details_url: "https://example.com/books/talent",
-  cover_url: "https://wormie-api.example.com/media/cover.avif",
+  cover_url: "https://storage.googleapis.com/wormie/covers/cover.avif",
   created_at: "2026-04-30T00:00:00Z",
   owner: {
     id: 2,
