@@ -100,7 +100,6 @@ img {
   max-width: 12ch;
 }
 
-.hero-kicker,
 .eyebrow {
   margin: 0;
   text-transform: uppercase;
@@ -115,46 +114,6 @@ img {
   max-width: 60ch;
   color: #4b4238;
   font-size: 1.05rem;
-}
-
-.hero-note {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  width: fit-content;
-  padding: 0.95rem 1.1rem;
-  border-radius: 20px;
-  background: rgba(250, 245, 233, 0.9);
-  border: 1px solid rgba(124, 94, 61, 0.14);
-}
-
-.hero-note p {
-  margin: 0;
-  max-width: 34ch;
-  color: #54493d;
-}
-
-.hero-note-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #2f6549;
-}
-
-.feature-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.feature-strip article {
-  padding: 1rem;
-  border-radius: 18px;
-  background: rgba(244, 236, 218, 0.72);
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
 }
 
 .auth-panel,
@@ -720,10 +679,6 @@ img {
   .auth-panel,
   .content-panel {
     padding: 1.25rem;
-  }
-
-  .feature-strip {
-    grid-template-columns: 1fr;
   }
 
   .topbar,
