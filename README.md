@@ -19,8 +19,55 @@ docker run --rm -p 8080:8080 -e API_BASE_URL=https://your-api-service-url wormie
 
 ## Cloud Run
 
-Deploy this repo as its own Cloud Run service:
+This repo deploys as its own public Cloud Run service and reads `API_BASE_URL` at runtime from `config.js`, so production frontend deploys do not require a rebuild for API URL changes.
+
+### Bootstrap GCP
+
+Create the web-specific production foundation once:
 
 ```powershell
-.\scripts\deploy-cloud-run.ps1 -ProjectId wormie-ingenuity -Account bob.bbvillarin@gmail.com -ApiBaseUrl "https://your-api-service-url"
+.\scripts\bootstrap-gcp.ps1
 ```
+
+Before you run it, attach an active billing account to the `wormie-ingenuity` project. Cloud Run and Artifact Registry cannot be enabled without billing.
+
+That script creates or updates:
+
+- Artifact Registry repo `wormie-web`
+- runtime and deployer service accounts
+- the shared GitHub Workload Identity Federation pool/provider if missing
+
+### Configure GitHub Actions
+
+After the API has a stable public URL, configure repository variables:
+
+```powershell
+.\scripts\configure-github-repo.ps1 -ApiBaseUrl "https://your-api-service-url"
+```
+
+### Manual fallback deploy
+
+Deploy this repo manually as its own Cloud Run service:
+
+```powershell
+.\scripts\deploy-cloud-run.ps1 `
+  -ProjectId wormie-ingenuity `
+  -Account bob.bbvillarin@gmail.com `
+  -RuntimeServiceAccount "wormie-web-runtime@wormie-ingenuity.iam.gserviceaccount.com" `
+  -ApiBaseUrl "https://your-api-service-url" `
+  -AllowUnauthenticated
+```
+
+### Protect `main`
+
+Once CI has run successfully at least once, protect the production branch:
+
+```powershell
+.\scripts\enable-branch-protection.ps1
+```
+
+## Notes
+
+- PRs validate the Vite build and Docker build.
+- Pushes to `main` deploy production directly.
+- The API repo still owns CORS; after the first web deployment, rerun the API repo configuration with the final web URL in `API_ALLOWED_ORIGINS`.

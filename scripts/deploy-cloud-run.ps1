@@ -6,9 +6,14 @@ param(
   [string]$ServiceName = "wormie-web",
   [string]$Region = "asia-east1",
   [string]$Repository = "wormie-web",
+  [string]$RuntimeServiceAccount,
   [string]$ApiBaseUrl,
   [switch]$AllowUnauthenticated
 )
+
+if (-not $RuntimeServiceAccount) {
+  throw "Provide -RuntimeServiceAccount with the web Cloud Run runtime service account email."
+}
 
 if (-not $ApiBaseUrl) {
   throw "Provide -ApiBaseUrl with the public backend URL before deploying."
@@ -40,33 +45,58 @@ if (-not $repositoryLookup) {
 }
 
 $imageTag = Get-Date -Format "yyyyMMdd-HHmmss"
-$imageUri = "$Region-docker.pkg.dev/$ProjectId/$Repository/$ServiceName:$imageTag"
+$imageUri = "$Region-docker.pkg.dev/$ProjectId/$Repository/${ServiceName}:$imageTag"
+$envFile = New-TemporaryFile
 
-& gcloud builds submit `
-  --tag $imageUri `
-  --project $ProjectId `
-  --account $Account `
-  .
+try {
+  @"
+API_BASE_URL: "$ApiBaseUrl"
+"@ | Set-Content -Path $envFile -Encoding utf8
 
-$deployArgs = @(
-  "run", "deploy", $ServiceName,
-  "--image", $imageUri,
-  "--region", $Region,
-  "--platform", "managed",
-  "--project", $ProjectId,
-  "--account", $Account,
-  "--set-env-vars", "API_BASE_URL=$ApiBaseUrl"
-)
+  & gcloud builds submit `
+    --tag $imageUri `
+    --project $ProjectId `
+    --account $Account `
+    .
 
-if ($AllowUnauthenticated) {
-  $deployArgs += "--allow-unauthenticated"
+  $deployArgs = @(
+    "run", "deploy", $ServiceName,
+    "--image", $imageUri,
+    "--region", $Region,
+    "--platform", "managed",
+    "--project", $ProjectId,
+    "--account", $Account,
+    "--service-account", $RuntimeServiceAccount,
+    "--cpu", "1",
+    "--memory", "512Mi",
+    "--concurrency", "80",
+    "--min-instances", "0",
+    "--execution-environment", "gen2",
+    "--env-vars-file", $envFile
+  )
+
+  if ($AllowUnauthenticated) {
+    $deployArgs += "--allow-unauthenticated"
+  }
+  else {
+    $deployArgs += "--no-allow-unauthenticated"
+  }
+
+  & gcloud @deployArgs
+
+  $serviceUrl = & gcloud run services describe $ServiceName `
+    --region $Region `
+    --project $ProjectId `
+    --account $Account `
+    --format "value(status.url)"
+
+  Invoke-WebRequest -Uri "$serviceUrl/health" -UseBasicParsing | Out-Null
+
+  Write-Host ""
+  Write-Host "Deployed $ServiceName to Cloud Run."
+  Write-Host "Image: $imageUri"
+  Write-Host "Service URL: $serviceUrl"
 }
-else {
-  $deployArgs += "--no-allow-unauthenticated"
+finally {
+  Remove-Item -LiteralPath $envFile -Force -ErrorAction SilentlyContinue
 }
-
-& gcloud @deployArgs
-
-Write-Host ""
-Write-Host "Deployed $ServiceName to Cloud Run."
-Write-Host "Image: $imageUri"
