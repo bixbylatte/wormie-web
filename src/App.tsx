@@ -11,7 +11,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth();
 
   if (!isReady) {
-    return <div className="splash-screen">Loading Wormie…</div>;
+    return <div className="splash-screen">Loading Wormie...</div>;
   }
 
   if (!user) {
@@ -25,7 +25,7 @@ export function App() {
   const { user, isReady } = useAuth();
 
   if (!isReady) {
-    return <div className="splash-screen">Loading Wormie…</div>;
+    return <div className="splash-screen">Loading Wormie...</div>;
   }
 
   return (
@@ -51,4 +51,3 @@ export function App() {
     </Routes>
   );
 }
-
